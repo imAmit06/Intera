@@ -5,8 +5,7 @@ import User from "../models/User.js";
 export const inngest = new Inngest({ id: "intera" });
 
 const syncUser = inngest.createFunction(
-  { id: "sync-user" },
-  { event: "clerk/user.created" },
+  { id: "sync-user", triggers: { event: "clerk/user.created" } },
   async ({ event }) => {
     await connectDb();
 
@@ -24,8 +23,7 @@ const syncUser = inngest.createFunction(
   },
 );
 const deleteUserFromDb = inngest.createFunction(
-  { id: "delete-user-from-db" },
-  { event: "clerk/user.deleted" },
+  { id: "delete-user-from-db", triggers: { event: "clerk/user.deleted" } },
   async ({ event }) => {
     await connectDb();
 
