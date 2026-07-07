@@ -102,7 +102,7 @@ export async function getMyRecentSessions(req, res) {
       .limit(20);
 
     res.status(200).json({ sessions });
-  } catch {
+  } catch (error) {
     console.log(`Error is getMyRecentSessions controller: ${error.message}`);
     res.status(500).json({ msg: "Internal Server Error" });
   }
@@ -160,18 +160,16 @@ export async function joinSession(req, res) {
       return res.status(400).json({ msg: "Invalid session ID." });
     }
 
-    const session = await Session.findOneAndUpdate(
-      { _id: id, participant: null },
-      { participant: userId },
-      { new: true },
-    );
-
-    if (!session) {
-      return res.status(400).json({ msg: "Session not found or already full" });
-    }
-
     const channel = chatClient.channel("messaging", session.callId);
-    await channel.addMembers([clerkId]);
+    try {
+      await channel.addMembers([clerkId]);
+    } catch (addMemberError) {
+      await Session.findOneAndUpdate(
+        { _id: session._id, participant: userId },
+        { $set: { participant: null } },
+      );
+      throw addMemberError;
+    }
 
     res.status(200).json({ session });
   } catch (error) {
