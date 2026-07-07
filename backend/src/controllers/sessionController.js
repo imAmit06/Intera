@@ -1,5 +1,6 @@
 import { chatClient, streamClient } from "../lib/stream.js";
 import Session from "../models/Session.js";
+import mongoose from "mongoose";
 
 export async function createSession(req, res) {
   try {
@@ -14,17 +15,12 @@ export async function createSession(req, res) {
     }
 
     const callId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const session = await Session.create({
-      problem,
-      difficulty,
-      host: userId,
-      callId,
-    });
+    const sessionId = new mongoose.Types.ObjectId();
 
     await streamClient.video.call("default", callId).getOrCreate({
       data: {
         created_by: clerkId,
-        custom: { problem, difficulty, sessionId: session._id.toString() },
+        custom: { problem, difficulty, sessionId: sessionId.toString() },
       },
     });
 
@@ -35,6 +31,15 @@ export async function createSession(req, res) {
     });
 
     await channel.create();
+
+    const session = await Session.create({
+      _id: sessionId,
+      problem,
+      difficulty,
+      host: userId,
+      callId,
+    });
+
     res.status(201).json({ session });
   } catch (error) {
     console.log(`Error is createSession controller: ${error.message}`);
@@ -78,6 +83,10 @@ export async function getSessionById(req, res) {
   try {
     const { id } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ msg: "Invalid session ID." });
+    }
+
     const session = await Session.findById(id)
       .populate("host", "name email profileImg clerkId")
       .populate("participant", "name email profileImg clerkId");
@@ -95,19 +104,23 @@ export async function getSessionById(req, res) {
 
 export async function joinSession(req, res) {
   try {
-    const id = req.params;
+    const { id } = req.params;
     const userId = req.user._id;
     const clerkId = req.user.clerkId;
 
-    const session = await Session.findById(id);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ msg: "Invalid session ID." });
+    }
 
-    if (!session) return res.status(404).json({ msg: "Session not found" });
+    const session = await Session.findOneAndUpdate(
+      { _id: id, participant: null },
+      { participant: userId },
+      { new: true }
+    );
 
-    if (session.participant)
-      return res.status(404).json({ msg: "Session is full" });
-
-    session.participant = userId;
-    await session.save();
+    if (!session) {
+      return res.status(400).json({ msg: "Session not found or already full" });
+    }
 
     const channel = chatClient.channel("messaging", session.callId);
     await channel.addMembers([clerkId]);
@@ -124,6 +137,10 @@ export async function endSession(req, res) {
     const { id } = req.params;
     const userId = req.user._id;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ msg: "Invalid session ID." });
+    }
+
     const session = await Session.findById(id);
 
     if (!session) return res.status(404).json({ msg: "Session not found" });
@@ -136,14 +153,14 @@ export async function endSession(req, res) {
       return res.status(400).json({ msg: "Session is already completed" });
     }
 
-    session.status = "completed";
-    await session.save();
-
     const call = streamClient.video.call("default", session.callId);
     await call.delete({ hard: true });
 
     const channel = chatClient.channel("messaging", session.callId);
     await channel.delete();
+
+    session.status = "completed";
+    await session.save();
 
     res.status(200).json({ msg: "Session ended successfully" });
   } catch (error) {
