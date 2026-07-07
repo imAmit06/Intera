@@ -120,6 +120,10 @@ export async function joinSession(req, res) {
 
     const existing = await Session.findById(id);
 
+    if (!existing) {
+      res.status(404).json({ msg: "Cannot find the session" });
+    }
+
     if (existing.status !== "active") {
       res.status(400).json({ msg: "Cannot join a completed session" });
     }
@@ -142,34 +146,6 @@ export async function joinSession(req, res) {
 
     const channel = chatClient.channel("messaging", session.callId);
     await channel.addMembers([clerkId]);
-
-    res.status(200).json({ session });
-  } catch (error) {
-    console.log(`Error is joinSession controller: ${error.message}`);
-    res.status(500).json({ msg: "Internal Server Error" });
-  }
-}
-
-export async function joinSession(req, res) {
-  try {
-    const { id } = req.params;
-    const userId = req.user._id;
-    const clerkId = req.user.clerkId;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ msg: "Invalid session ID." });
-    }
-
-    const channel = chatClient.channel("messaging", session.callId);
-    try {
-      await channel.addMembers([clerkId]);
-    } catch (addMemberError) {
-      await Session.findOneAndUpdate(
-        { _id: session._id, participant: userId },
-        { $set: { participant: null } },
-      );
-      throw addMemberError;
-    }
 
     res.status(200).json({ session });
   } catch (error) {
