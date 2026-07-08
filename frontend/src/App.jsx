@@ -1,17 +1,27 @@
-import "./App.css";
-import { Show, UserButton, SignInButton, SignUpButton } from "@clerk/react";
+import {
+  Show,
+  UserButton,
+  SignInButton,
+  SignUpButton,
+  useUser,
+} from "@clerk/react";
+import { Routes, Route, Navigate } from "react-router";
+import HomePage from "./pages/HomePage.jsx";
+import ProblemPage from "./pages/ProblemsPage.jsx";
+import { Toaster } from "react-hot-toast";
 
 function App() {
+  const { isSignedIn } = useUser();
   return (
     <>
-      <h1>Welcome to Intera</h1>
-      <Show when="signed-out">
-        <SignInButton mode="modal" />
-        <SignUpButton mode="modal" />
-      </Show>
-      <Show when="signed-in">
-        <UserButton mode="modal" />
-      </Show>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route
+          path="/problems"
+          element={isSignedIn ? <ProblemPage /> : <Navigate to={"/"} />}
+        />
+      </Routes>
+      <Toaster toastOptions={{ duration: 3000 }} />
     </>
   );
 }
