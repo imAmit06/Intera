@@ -1,7 +1,6 @@
-// Piston API is a service for code execution
+import axiosInstance from "./axios.js";
 
-const PISTON_BASE_URL = import.meta.env.VITE_PISTON_BASE_URL;
-const PISTON_API = import.meta.env.VITE_PISTON_API;
+const PISTON_REQUEST_TIMEOUT_MS = 15000;
 
 const LANGUAGE_VERSIONS = {
   javascript: { language: "javascript", version: "18.15.0" },
@@ -15,6 +14,12 @@ const LANGUAGE_VERSIONS = {
  * @returns {Promise<{success:boolean, output?:string, error?: string}>}
  */
 export async function executeCode(language, code) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    PISTON_REQUEST_TIMEOUT_MS,
+  );
+
   try {
     const languageConfig = LANGUAGE_VERSIONS[language];
 
@@ -25,13 +30,9 @@ export async function executeCode(language, code) {
       };
     }
 
-    const response = await fetch(`${PISTON_BASE_URL}/execute`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Api-Key": PISTON_API,
-      },
-      body: JSON.stringify({
+    const response = await axiosInstance.post(
+      "/piston/execute",
+      {
         language: languageConfig.language,
         version: languageConfig.version,
         files: [
@@ -40,17 +41,11 @@ export async function executeCode(language, code) {
             content: code,
           },
         ],
-      }),
-    });
+      },
+      { signal: controller.signal },
+    );
 
-    if (!response.ok) {
-      return {
-        success: false,
-        error: `HTTP error! status: ${response.status}`,
-      };
-    }
-
-    const data = await response.json();
+    const data = response.data;
 
     const output = data.run.output || "";
     const stderr = data.run.stderr || "";
@@ -68,10 +63,28 @@ export async function executeCode(language, code) {
       output: output || "No output",
     };
   } catch (error) {
+    if (error.name === "CanceledError" || error.name === "AbortError") {
+      return {
+        success: false,
+        error: "Failed to execute code: request timed out",
+      };
+    }
+
+    const status = error.response?.status;
+
+    if (status) {
+      return {
+        success: false,
+        error: `HTTP error! status: ${status}`,
+      };
+    }
+
     return {
       success: false,
       error: `Failed to execute code: ${error.message}`,
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

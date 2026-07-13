@@ -7,6 +7,7 @@ import { clerkMiddleware } from "@clerk/express";
 import cors from "cors";
 import { protectRoute } from "./middleware/protectRoute.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import pistonRoutes from "./routes/pistonRoutes.js";
 import sessionRoutes from "./routes/sessionRoutes.js";
 
 const app = express();
@@ -17,6 +18,7 @@ app.use(clerkMiddleware());
 
 app.use("/api/inngest", serve({ client: inngest, functions }));
 app.use("/api/chat", chatRoutes);
+app.use("/api/piston", pistonRoutes);
 app.use("/api/sessions", sessionRoutes);
 
 app.get("/health", (req, res) => {
