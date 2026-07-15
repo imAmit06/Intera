@@ -19,7 +19,7 @@ export async function createSession(req, res) {
 
     await streamClient.video.call("default", callId).getOrCreate({
       data: {
-        created_by: clerkId,
+        created_by: { id: clerkId },
         custom: { problem, difficulty, sessionId: sessionId.toString() },
       },
     });
@@ -80,9 +80,9 @@ export async function getActiveSessions(_, res) {
   try {
     const sessions = await Session.find({ status: "active" })
       .populate("host", "name profileImg email clerkId")
+      .populate("participant", "name profileImg clerkId")
       .sort({ createdAt: -1 })
       .limit(20);
-
     res.status(200).json({ sessions });
   } catch (error) {
     console.log(`Error is getActiveSession controller: ${error.message}`);
