@@ -38,8 +38,14 @@ const SessionPage = () => {
   const isHost = session?.host?.clerkId === user?.id;
   const isParticipant = session?.participant?.clerkId === user?.id;
 
-  const { call, channel, chatClient, isInitializingCall, streamClient } =
-    useStreamClient(session, loadingSession, isHost, isParticipant);
+  const {
+    call,
+    channel,
+    chatClient,
+    isInitializingCall,
+    isWaitingToJoin,
+    streamClient,
+  } = useStreamClient(session, loadingSession, isHost, isParticipant);
 
   const problemData = session?.problem
     ? Object.values(PROBLEMS).find((p) => p.title === session.problem)
@@ -74,15 +80,20 @@ const SessionPage = () => {
 
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;
-    setSelectedLanguage(newLang);
-    const starterCode = problemData?.starterCode?.[newLang] || "";
-    setCode(starterCode);
-    setOutput(null);
-  };
-
   const handleRunCode = async () => {
     setIsRunning(true);
     setOutput(null);
+
+    try {
+      const result = await executeCode(selectedLanguage, code);
+      setOutput(result);
+    } catch (error) {
+      // Map this through OutputPanel's existing error-result contract.
+      console.error("Code execution failed:", error);
+    } finally {
+      setIsRunning(false);
+    }
+  };    setOutput(null);
 
     const result = await executeCode(selectedLanguage, code);
     setOutput(result);
@@ -272,7 +283,12 @@ const SessionPage = () => {
           {/* RIGHT PANEL - VIDEO CALL & CHAT */}
           <Panel defaultSize={50} minSize={30}>
             <div className="h-full bg-base-200 p-4 overflow-auto">
-              {isInitializingCall ? (
+              {isWaitingToJoin ? (
+                <div className="text-center">
+                  <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary mb-4" />
+                  <p className="text-lg">Waiting to join session...</p>
+                </div>
+              ) : isInitializingCall ? (
                 <div className="text-center">
                   <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary mb-4" />
                   <p className="text-lg">Connecting to video call...</p>

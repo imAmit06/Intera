@@ -10,15 +10,27 @@ function useStreamClient(session, loadingSession, isHost, isParticipant) {
   const [chatClient, setChatClient] = useState(null);
   const [channel, setChannel] = useState(null);
   const [isInitializingCall, setIsInitializingCall] = useState(true);
+  const [isWaitingToJoin, setIsWaitingToJoin] = useState(false);
 
   useEffect(() => {
     let videoCall = null;
     let chatClientInstance = null;
 
     const initCall = async () => {
-      if (!session?.callId) return;
-      if (!isHost && !isParticipant) return;
-      if (session.status === "completed") return;
+      if (session?.status === "completed") {
+        setIsWaitingToJoin(false);
+        setIsInitializingCall(false);
+        return;
+      }
+
+      if (!session?.callId || (!isHost && !isParticipant)) {
+        setIsWaitingToJoin(true);
+        setIsInitializingCall(false);
+        return;
+      }
+
+      setIsWaitingToJoin(false);
+      setIsInitializingCall(true);
 
       try {
         const { token, userId, userName, userImage } =
@@ -48,6 +60,7 @@ function useStreamClient(session, loadingSession, isHost, isParticipant) {
         await chatChannel.watch();
         setChannel(chatChannel);
       } catch (error) {
+        setIsWaitingToJoin(false);
         toast.error("Failed to join video call. Please try again.");
         console.error("Error joining video call:", error);
       } finally {
@@ -72,7 +85,14 @@ function useStreamClient(session, loadingSession, isHost, isParticipant) {
     };
   }, [session, loadingSession, isHost, isParticipant]);
 
-  return { streamClient, call, chatClient, channel, isInitializingCall };
+  return {
+    streamClient,
+    call,
+    chatClient,
+    channel,
+    isInitializingCall,
+    isWaitingToJoin,
+  };
 }
 
 export default useStreamClient;
