@@ -80,6 +80,12 @@ const SessionPage = () => {
 
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;
+    setSelectedLanguage(newLang);
+    if (problemData?.starterCode?.[newLang]) {
+      setCode(problemData.starterCode[newLang]);
+    }
+  };
+
   const handleRunCode = async () => {
     setIsRunning(true);
     setOutput(null);
@@ -88,16 +94,10 @@ const SessionPage = () => {
       const result = await executeCode(selectedLanguage, code);
       setOutput(result);
     } catch (error) {
-      // Map this through OutputPanel's existing error-result contract.
       console.error("Code execution failed:", error);
     } finally {
       setIsRunning(false);
     }
-  };    setOutput(null);
-
-    const result = await executeCode(selectedLanguage, code);
-    setOutput(result);
-    setIsRunning(false);
   };
 
   const handleEndSession = () => {
