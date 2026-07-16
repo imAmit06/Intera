@@ -1,4 +1,4 @@
-import { useUser } from "@clerk/react";
+import { useAuth, useUser } from "@clerk/react";
 import { Toaster } from "react-hot-toast";
 import { Navigate, Route, Routes } from "react-router";
 import DashboardPage from "./pages/DashboardPage.jsx";
@@ -6,8 +6,15 @@ import HomePage from "./pages/HomePage.jsx";
 import ProblemPage from "./pages/ProblemPage.jsx";
 import ProblemsPage from "./pages/ProblemsPage.jsx";
 import SessionPage from "./pages/SessionPage.jsx";
+import { useEffect } from "react";
+import { setupAxiosAuth } from "./lib/axios.js";
 
 function App() {
+  const { getToken } = useAuth();
+
+  useEffect(() => {
+    setupAxiosAuth(getToken);
+  }, [getToken]);
   const { isSignedIn, isLoaded } = useUser();
 
   if (!isLoaded) return null;
