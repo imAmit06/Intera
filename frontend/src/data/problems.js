@@ -365,3 +365,46 @@ export const LANGUAGE_CONFIG = {
     monacoLang: "java",
   },
 };
+
+export const HOME_PAGE_CODE_SNIPPET = {
+  javascript: `function greet(name) {
+  return \`Hello, \${name}! Welcome to Intera.\`;
+}
+
+function fibonacci(n) {
+  if (n <= 1) return n;
+  return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+console.log(greet("World"));
+console.log("Fibonacci(10):", fibonacci(10));
+`,
+
+  python: `def greet(name):
+    return f"Hello, {name}! Welcome to Intera."
+
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+
+print(greet("World"))
+print("Fibonacci(10):", fibonacci(10))
+`,
+
+  java: `public class Main {
+    static String greet(String name) {
+        return "Hello, " + name + "! Welcome to Intera.";
+    }
+
+    static int fibonacci(int n) {
+        if (n <= 1) return n;
+        return fibonacci(n - 1) + fibonacci(n - 2);
+    }
+
+    public static void main(String[] args) {
+        System.out.println(greet("World"));
+        System.out.println("Fibonacci(10): " + fibonacci(10));
+    }
+}`,
+};
