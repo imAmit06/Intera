@@ -60,22 +60,16 @@ const SessionPage = () => {
     setCode("");
   }, [id]);
 
-  // auto-join session if user is not already a participant and not the host
+  const hasAttemptedJoin = useRef(false);
+
   useEffect(() => {
     if (!session || !user || loadingSession) return;
     if (isHost || isParticipant) return;
+    if (hasAttemptedJoin.current) return;
 
+    hasAttemptedJoin.current = true;
     joinSessionMutation.mutate(id, { onSuccess: refetch });
-  }, [
-    session,
-    user,
-    loadingSession,
-    isHost,
-    isParticipant,
-    id,
-    joinSessionMutation,
-    refetch,
-  ]);
+  }, [session, user, loadingSession, isHost, isParticipant, id]);
 
   //redirect the participant when session ends
   useEffect(() => {
