@@ -47,18 +47,22 @@ const useCollaborativeEditor = ({
 
   const seedLanguageIfEmpty = useCallback((lang) => {
     const yDoc = yDocRef.current;
-    if (!yDoc || seededLanguagesRef.current.has(lang)) return;
+    if (!yDoc) return;
 
     const yText = yDoc.getText(getTextName(lang));
-    if (yText.length === 0) {
-      const starter = starterCodeRef.current?.[lang];
-      if (starter) {
-        yDoc.transact(() => {
-          yText.insert(0, starter);
-        }, "initialize-code");
-      }
+
+    if (yText.length > 0) {
+      seededLanguagesRef.current.add(lang);
+      return;
     }
-    seededLanguagesRef.current.add(lang);
+
+    const starter = starterCodeRef.current?.[lang];
+    if (starter) {
+      yDoc.transact(() => {
+        yText.insert(0, starter);
+      }, "initialize-code");
+      seededLanguagesRef.current.add(lang);
+    }
   }, []);
 
   const rebindEditor = useCallback(
