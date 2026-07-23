@@ -1,9 +1,28 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router";
-import { CodeXml, Video, ArrowRight, Zap, Check, Users } from "lucide-react";
+import {
+  CodeXml,
+  Video,
+  ArrowRight,
+  Zap,
+  Check,
+  Users,
+  TrendingUp,
+} from "lucide-react";
 import { SignInButton } from "@clerk/react";
+import CodeEditor from "../components/CodeEditorPanel";
+import { HOME_PAGE_CODE_SNIPPET } from "../data/problems";
 
 const HomePage = () => {
+  const [selectedLanguage, setSelectedLanguage] = useState("javascript");
+  const [code, setCode] = useState(HOME_PAGE_CODE_SNIPPET.javascript);
+
+  const handleLanguageChange = (e) => {
+    const newLang = e.target.value;
+    setSelectedLanguage(newLang);
+    setCode(HOME_PAGE_CODE_SNIPPET[newLang]);
+    setOutput(null);
+  };
   return (
     <div className="bg-linear-to-br from-base-100 via-base-200 to-base-300">
       {/* NAVBAR */}
@@ -14,12 +33,12 @@ const HomePage = () => {
             to={"/"}
             className="flex items-center gap-3 hover:scale-105 transition-transform duration-200"
           >
-            <div className="size-10 rounded-xl bg-linear-to-br from-primary via-secondary to-accent flex items-center justify-center shadow-lg">
+            <div className="size-10 rounded-xl bg-primary flex items-center justify-center shadow-lg">
               <CodeXml className="size-6 text-white" />
             </div>
 
             <div className="flex flex-col">
-              <span className="font-black text-xl bg-linear-to-r from-primary via-secondary to-accent bg-clip-text text-transparent font-mono tracking-wider">
+              <span className="font-black text-xl bg-primary-content bg-clip-text text-transparent font-mono tracking-wider">
                 Intera
               </span>
               <span className="text-xs text-base-content/60 font-medium -mt-1">
@@ -29,7 +48,7 @@ const HomePage = () => {
           </Link>
           {/* AUTH BTN */}
           <SignInButton mode="modal">
-            <button className="group px-6 py-3 bg-linear-to-r from-primary to-secondary rounded-xl text-white font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center gap-2">
+            <button className="group px-6 py-3 bg-primary rounded-xl text-primary-content font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center gap-2">
               <span>Get started</span>
               <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform" />
             </button>
@@ -42,13 +61,13 @@ const HomePage = () => {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* LEFT CONTENT */}
           <div className="space-y-7">
-            <div className="badge badge-primary badge-lg">
+            <div className="badge badge-primary badge-xl">
               <Zap className="size-4" />
               Real-time Collaboration
             </div>
 
             <h1 className="text-5xl lg:text-7xl font-black leading-tight">
-              <span className="bg-linear-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+              <span className="bg-primary bg-clip-text text-transparent">
                 Ditch the
               </span>
               <br />
@@ -93,25 +112,37 @@ const HomePage = () => {
             {/* STATS */}
             <div className="stats stats-vertical lg:stats-horizontal bg-base-100 shadow-lg">
               <div className="stat">
-                <div className="stat-value text-primary">10K+</div>
-                <div className="stat-title">Active User</div>
+                <div className="stat-value text-neutral-content">10K+</div>
+                <div className="stat-title flex items-center gap-2">
+                  <TrendingUp className="size-4 text-success" />
+                  Active User
+                </div>
               </div>
               <div className="stat">
-                <div className="stat-value text-secondary">50K+</div>
-                <div className="stat-title">Sessions</div>
+                <div className="stat-value text-neutral-content">50K+</div>
+                <div className="stat-title flex items-center gap-2">
+                  <TrendingUp className="size-4 text-success" />
+                  Sessions
+                </div>
               </div>
               <div className="stat">
-                <div className="stat-value text-accent">99.9%</div>
-                <div className="stat-title">Uptime</div>
+                <div className="stat-value text-neutral-content ">98.9%</div>
+                <div className="stat-title flex items-center gap-2">
+                  <TrendingUp className="size-4 text-success" />
+                  Uptime
+                </div>
               </div>
             </div>
           </div>
 
           {/* RIGHT IMAGE */}
-          <img
-            src="/hero.png"
-            alt="Intera Platform"
-            className="w-full h-auto rounded-3xl shadow-2xl border-4 border-base-100 hover:scale-105 transition-transform duration-500"
+          <CodeEditor
+            selectedLanguage={selectedLanguage}
+            code={code}
+            isRunning={false}
+            onLanguageChange={handleLanguageChange}
+            onCodeChange={setCode}
+            onRunCode={() => {}}
           />
         </div>
       </div>
@@ -120,8 +151,7 @@ const HomePage = () => {
       <div className="max-w-7xl mx-auto px-4 py-9">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold mb-4">
-            Everything you need to{" "}
-            <span className="text-primary font-mono">Succeed</span>
+            Everything you need to <span className="text-primary">Succeed</span>
           </h2>
           <p className="text-lg text-base-content/70 max-w-2xl mx-auto">
             Powerful features to help you excel in technical interviews
@@ -147,7 +177,7 @@ const HomePage = () => {
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body items-center text-center">
               <div className="size-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
-                <CodeXml className="size-8 text-secondary" />
+                <CodeXml className="size-8 text-primary" />
               </div>
               <h3 className="card-title">Live Code Editor</h3>
               <p className="text-base-content/70">
@@ -160,7 +190,7 @@ const HomePage = () => {
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body items-center text-center">
               <div className="size-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
-                <Users className="size-8 text-secondary" />
+                <Users className="size-8 text-primary" />
               </div>
               <h3 className="card-title">Easy Collaboration</h3>
               <p className="text-base-content/70">

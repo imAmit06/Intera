@@ -1,5 +1,5 @@
 import { useUser } from "@clerk/react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   useEndSession,
   useJoinSession,
@@ -12,7 +12,7 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import { useNavigate, useParams } from "react-router";
 import { getDifficultyBadgeClass } from "../lib/utils";
 import { Loader2, Loader2Icon, LogOutIcon } from "lucide-react";
-import CodeEditorPanel from "../components/CodeEditorPanel";
+import CollaborativeEditor from "../components/CollaborativeEditor.jsx";
 import OutputPanel from "../components/OutputPanel";
 import useStreamClient from "../hooks/useStreamClient";
 import { StreamCall, StreamVideo } from "@stream-io/video-react-sdk";
@@ -52,15 +52,22 @@ const SessionPage = () => {
     : null;
 
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
-  const [code, setCode] = useState(
-    problemData?.starterCode?.[selectedLanguage] || "",
-  );
+  const [code, setCode] = useState("");
+  const hasInitializedCodeRef = useRef(false);
 
-  // auto-join session if user is not already a participant and not the host
+  useEffect(() => {
+    hasInitializedCodeRef.current = false;
+    setCode("");
+  }, [id]);
+
+  const hasAttemptedJoin = useRef(false);
+
   useEffect(() => {
     if (!session || !user || loadingSession) return;
     if (isHost || isParticipant) return;
+    if (hasAttemptedJoin.current) return;
 
+    hasAttemptedJoin.current = true;
     joinSessionMutation.mutate(id, { onSuccess: refetch });
   }, [session, user, loadingSession, isHost, isParticipant, id]);
 
@@ -73,16 +80,27 @@ const SessionPage = () => {
 
   // update code when problem loads or changes
   useEffect(() => {
-    if (problemData?.starterCode?.[selectedLanguage]) {
-      setCode(problemData.starterCode[selectedLanguage]);
+    if (hasInitializedCodeRef.current) {
+      return;
+    }
+
+    const starterCode = problemData?.starterCode?.[selectedLanguage];
+
+    if (starterCode) {
+      setCode(starterCode);
+      hasInitializedCodeRef.current = true;
     }
   }, [problemData, selectedLanguage]);
 
   const handleLanguageChange = (e) => {
-    const newLang = e.target.value;
-    setSelectedLanguage(newLang);
-    if (problemData?.starterCode?.[newLang]) {
-      setCode(problemData.starterCode[newLang]);
+    const nextLanguage = e.target.value;
+    const currentStarterCode = problemData?.starterCode?.[selectedLanguage];
+    const nextStarterCode = problemData?.starterCode?.[nextLanguage];
+
+    setSelectedLanguage(nextLanguage);
+
+    if ((code === currentStarterCode || !code) && nextStarterCode) {
+      setCode(nextStarterCode);
     }
   };
 
@@ -262,13 +280,15 @@ const SessionPage = () => {
               <Panel defaultSize={50} minSize={20}>
                 <Group orientation="vertical">
                   <Panel defaultSize={70} minSize={30}>
-                    <CodeEditorPanel
+                    <CollaborativeEditor
+                      sessionId={session?._id || id}
                       selectedLanguage={selectedLanguage}
                       code={code}
                       isRunning={isRunning}
                       onLanguageChange={handleLanguageChange}
-                      onCodeChange={(value) => setCode(value)}
+                      onCodeChange={setCode}
                       onRunCode={handleRunCode}
+                      starterCode={problemData?.starterCode?.[selectedLanguage]}
                     />
                   </Panel>
                   <Separator className="h-2 bg-base-300 hover:bg-primary transition-colors cursor-row-resize" />

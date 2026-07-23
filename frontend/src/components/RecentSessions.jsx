@@ -4,13 +4,15 @@ import { formatDistanceToNow } from "date-fns";
 
 function RecentSessions({ sessions, isLoading }) {
   return (
-    <div className="card bg-base-100 border-2 border-accent/20 hover:border-accent/30 mt-8">
+    <div className="card bg-base-100 border-2 border-primary/20 hover:border-primary/30 mt-8">
       <div className="card-body">
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-linear-to-br from-accent to-secondary rounded-xl">
+          <div className="p-2 bg-primary rounded-xl">
             <Clock className="w-5 h-5 text-white" />
           </div>
-          <h2 className="text-2xl font-black">Your Past Sessions</h2>
+          <h2 className="text-2xl text-primary-content font-black">
+            Your Past Sessions
+          </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -42,8 +44,8 @@ function RecentSessions({ sessions, isLoading }) {
                     <div
                       className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                         session.status === "active"
-                          ? "bg-linear-to-br from-success to-success/70"
-                          : "bg-linear-to-br from-primary to-secondary"
+                          ? "bg-success"
+                          : "bg-primary"
                       }`}
                     >
                       <Code2 className="w-6 h-6 text-white" />
@@ -53,7 +55,7 @@ function RecentSessions({ sessions, isLoading }) {
                         {session.problem}
                       </h3>
                       <span
-                        className={`badge badge-sm ${getDifficultyBadgeClass(session.difficulty)}`}
+                        className={`badge badge-sm ${getDifficultyBadgeClass(session.difficulty)} capitalize`}
                       >
                         {session.difficulty}
                       </span>
@@ -91,8 +93,8 @@ function RecentSessions({ sessions, isLoading }) {
             ))
           ) : (
             <div className="col-span-full text-center py-16">
-              <div className="w-20 h-20 mx-auto mb-4 bg-linear-to-br from-accent/20 to-secondary/20 rounded-3xl flex items-center justify-center">
-                <Trophy className="w-10 h-10 text-accent/50" />
+              <div className="w-20 h-20 mx-auto mb-4 bg-primary/20 rounded-3xl flex items-center justify-center">
+                <Trophy className="w-10 h-10 text-primary/50" />
               </div>
               <p className="text-lg font-semibold opacity-70 mb-1">
                 No sessions yet

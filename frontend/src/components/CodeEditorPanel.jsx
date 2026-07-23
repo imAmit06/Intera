@@ -9,6 +9,7 @@ const CodeEditor = ({
   onLanguageChange,
   onCodeChange,
   onRunCode,
+  onEditorMount,
 }) => {
   return (
     <div className="h-full bg-base-300 flex flex-col">
@@ -56,7 +57,8 @@ const CodeEditor = ({
           height={"100%"}
           language={LANGUAGE_CONFIG[selectedLanguage].monacoLang}
           value={code}
-          onChange={onCodeChange}
+          onChange={(value) => onCodeChange(value ?? "")}
+          onMount={onEditorMount}
           theme="vs-dark"
           options={{
             fontSize: 14,
