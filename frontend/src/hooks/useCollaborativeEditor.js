@@ -65,6 +65,11 @@ const useCollaborativeEditor = ({
     }
   }, []);
 
+  useEffect(() => {
+    if (!starterCode) return;
+    seedLanguageIfEmpty(languageRef.current);
+  }, [starterCode, seedLanguageIfEmpty]);
+
   const rebindEditor = useCallback(
     (lang) => {
       const yDoc = yDocRef.current;
