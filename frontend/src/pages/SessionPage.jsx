@@ -52,12 +52,6 @@ const SessionPage = () => {
     : null;
 
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
-  const hasInitializedCodeRef = useRef(false);
-
-  useEffect(() => {
-    hasInitializedCodeRef.current = false;
-    setCode("");
-  }, [id]);
 
   const hasAttemptedJoin = useRef(false);
 
@@ -70,26 +64,12 @@ const SessionPage = () => {
     joinSessionMutation.mutate(id, { onSuccess: refetch });
   }, [session, user, loadingSession, isHost, isParticipant, id]);
 
-  //redirect the participant when session ends
+  // redirect the participant when session ends
   useEffect(() => {
     if (!session || loadingSession) return;
 
     if (session.status === "completed") navigate("/dashboard");
   }, [session, loadingSession, navigate]);
-
-  // update code when problem loads or changes
-  useEffect(() => {
-    if (hasInitializedCodeRef.current) {
-      return;
-    }
-
-    const starterCode = problemData?.starterCode?.[selectedLanguage];
-
-    if (starterCode) {
-      setCode(starterCode);
-      hasInitializedCodeRef.current = true;
-    }
-  }, [problemData, selectedLanguage]);
 
   const handleRunCode = async (currentCode) => {
     setIsRunning(true);
@@ -116,6 +96,7 @@ const SessionPage = () => {
       });
     }
   };
+
   return (
     <div className="h-screen bg-base-100 flex flex-col">
       <Navbar />
@@ -149,8 +130,10 @@ const SessionPage = () => {
                         <span
                           className={`badge badge-lg ${getDifficultyBadgeClass(session?.difficulty)} `}
                         >
-                          {session?.difficulty.slice(0, 1).toUpperCase() +
-                            session?.difficulty.slice(1) || "Easy"}
+                          {session?.difficulty
+                            ? session.difficulty.slice(0, 1).toUpperCase() +
+                              session.difficulty.slice(1)
+                            : "Easy"}
                         </span>
                         {isHost && session?.status === "active" && (
                           <button
