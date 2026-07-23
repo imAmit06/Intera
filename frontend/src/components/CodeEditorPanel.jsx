@@ -1,5 +1,5 @@
 import Editor from "@monaco-editor/react";
-import { Loader2Icon, Play, PlayIcon } from "lucide-react";
+import { Loader2Icon, Play } from "lucide-react";
 import { LANGUAGE_CONFIG } from "../data/problems.js";
 
 const CodeEditor = ({
@@ -10,6 +10,7 @@ const CodeEditor = ({
   onCodeChange,
   onRunCode,
   onEditorMount,
+  isCollaborative = false,
 }) => {
   return (
     <div className="h-full bg-base-300 flex flex-col">
@@ -33,41 +34,61 @@ const CodeEditor = ({
             ))}
           </select>
         </div>
-        <button
-          className="btn btn-primary btn-sm gap-2"
-          disabled={isRunning}
-          onClick={onRunCode}
-        >
-          {isRunning ? (
-            <>
-              <Loader2Icon className="size-4 animate-spin" />
-              Running...
-            </>
-          ) : (
-            <>
-              <Play className="size-4" />
-              Run Code
-            </>
-          )}
-        </button>
+
+        {onRunCode && (
+          <button
+            className="btn btn-primary btn-sm gap-2"
+            disabled={isRunning}
+            onClick={onRunCode}
+          >
+            {isRunning ? (
+              <>
+                <Loader2Icon className="size-4 animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <Play className="size-4" />
+                Run Code
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       <div className="flex-1 min-h-0">
-        <Editor
-          height={"100%"}
-          language={LANGUAGE_CONFIG[selectedLanguage].monacoLang}
-          value={code}
-          onChange={(value) => onCodeChange(value ?? "")}
-          onMount={onEditorMount}
-          theme="vs-dark"
-          options={{
-            fontSize: 14,
-            lineNumbers: "on",
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            minimap: { enabled: false },
-          }}
-        />
+        {isCollaborative ? (
+          <Editor
+            height={"100%"}
+            language={LANGUAGE_CONFIG[selectedLanguage].monacoLang}
+            defaultValue={code}
+            onMount={onEditorMount}
+            theme="vs-dark"
+            options={{
+              fontSize: 14,
+              lineNumbers: "on",
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              minimap: { enabled: false },
+            }}
+          />
+        ) : (
+          <Editor
+            height={"100%"}
+            language={LANGUAGE_CONFIG[selectedLanguage].monacoLang}
+            value={code}
+            onChange={(value) => onCodeChange?.(value ?? "")}
+            onMount={onEditorMount}
+            theme="vs-dark"
+            options={{
+              fontSize: 14,
+              lineNumbers: "on",
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              minimap: { enabled: false },
+            }}
+          />
+        )}
       </div>
     </div>
   );

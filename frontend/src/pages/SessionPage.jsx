@@ -52,7 +52,6 @@ const SessionPage = () => {
     : null;
 
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
-  const [code, setCode] = useState("");
   const hasInitializedCodeRef = useRef(false);
 
   useEffect(() => {
@@ -92,24 +91,12 @@ const SessionPage = () => {
     }
   }, [problemData, selectedLanguage]);
 
-  const handleLanguageChange = (e) => {
-    const nextLanguage = e.target.value;
-    const currentStarterCode = problemData?.starterCode?.[selectedLanguage];
-    const nextStarterCode = problemData?.starterCode?.[nextLanguage];
-
-    setSelectedLanguage(nextLanguage);
-
-    if ((code === currentStarterCode || !code) && nextStarterCode) {
-      setCode(nextStarterCode);
-    }
-  };
-
-  const handleRunCode = async () => {
+  const handleRunCode = async (currentCode) => {
     setIsRunning(true);
     setOutput(null);
 
     try {
-      const result = await executeCode(selectedLanguage, code);
+      const result = await executeCode(selectedLanguage, currentCode);
       setOutput(result);
     } catch (error) {
       console.error("Code execution failed:", error);
@@ -282,13 +269,11 @@ const SessionPage = () => {
                   <Panel defaultSize={70} minSize={30}>
                     <CollaborativeEditor
                       sessionId={session?._id || id}
-                      selectedLanguage={selectedLanguage}
-                      code={code}
                       isRunning={isRunning}
-                      onLanguageChange={handleLanguageChange}
-                      onCodeChange={setCode}
                       onRunCode={handleRunCode}
-                      starterCode={problemData?.starterCode?.[selectedLanguage]}
+                      onLanguageChange={setSelectedLanguage}
+                      starterCode={problemData?.starterCode}
+                      defaultLanguage={selectedLanguage}
                     />
                   </Panel>
                   <Separator className="h-2 bg-base-300 hover:bg-primary transition-colors cursor-row-resize" />

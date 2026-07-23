@@ -3,29 +3,36 @@ import useCollaborativeEditor from "../hooks/useCollaborativeEditor.js";
 
 const CollaborativeEditor = ({
   sessionId,
-  selectedLanguage,
-  code,
   isRunning,
-  onLanguageChange,
-  onCodeChange,
   onRunCode,
+  onLanguageChange,
   starterCode,
+  defaultLanguage = "javascript",
 }) => {
-  const { handleEditorMount } = useCollaborativeEditor({
-    sessionId,
-    starterCode,
-    onRemoteCodeChange: onCodeChange,
-  });
+  const { handleEditorMount, language, setSharedLanguage, getCurrentCode } =
+    useCollaborativeEditor({
+      sessionId,
+      starterCode,
+      defaultLanguage,
+      onLanguageChange,
+    });
+
+  const handleLanguageSelect = (e) => {
+    setSharedLanguage(e.target.value);
+  };
+
+  const handleRunCode = () => {
+    onRunCode?.(getCurrentCode());
+  };
 
   return (
     <CodeEditorPanel
-      selectedLanguage={selectedLanguage}
-      code={code}
+      selectedLanguage={language}
       isRunning={isRunning}
-      onLanguageChange={onLanguageChange}
-      onCodeChange={onCodeChange}
-      onRunCode={onRunCode}
+      onLanguageChange={handleLanguageSelect}
+      onRunCode={onRunCode ? handleRunCode : null}
       onEditorMount={handleEditorMount}
+      isCollaborative
     />
   );
 };

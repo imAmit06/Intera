@@ -1,124 +1,151 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { MonacoBinding } from "y-monaco";
 
-const DEFAULT_WEBSOCKET_URL =
-  import.meta.env.VITE_YJS_WEBSOCKET_URL ?? "ws://localhost:1234";
+const WEBSOCKET_URL = import.meta.env.VITE_YJS_WEBSOCKET_URL;
 
-const Y_TEXT_NAME = "shared-code";
+if (!WEBSOCKET_URL && import.meta.env.PROD) {
+  console.error(
+    "VITE_YJS_WEBSOCKET_URL is not set — collaboration will not work.",
+  );
+}
+
+const WS_URL = WEBSOCKET_URL ?? "ws://localhost:1234";
+
+const getTextName = (language) => `code-${language}`;
 
 const useCollaborativeEditor = ({
   sessionId,
-  starterCode = "",
-  onRemoteCodeChange,
+  starterCode = {},
+  defaultLanguage = "javascript",
+  onLanguageChange,
 }) => {
   const yDocRef = useRef(null);
-  const yTextRef = useRef(null);
+  const yMetaRef = useRef(null);
   const providerRef = useRef(null);
   const bindingRef = useRef(null);
   const editorRef = useRef(null);
   const starterCodeRef = useRef(starterCode);
-  const remoteCodeChangeRef = useRef(onRemoteCodeChange);
-  const seededInitialCodeRef = useRef(false);
+  const onLanguageChangeRef = useRef(onLanguageChange);
+  const seededLanguagesRef = useRef(new Set());
+  const languageRef = useRef(defaultLanguage);
+
+  const [language, setLanguageState] = useState(defaultLanguage);
 
   useEffect(() => {
     starterCodeRef.current = starterCode;
   }, [starterCode]);
 
   useEffect(() => {
-    remoteCodeChangeRef.current = onRemoteCodeChange;
-  }, [onRemoteCodeChange]);
+    onLanguageChangeRef.current = onLanguageChange;
+  }, [onLanguageChange]);
 
-  const notifyRemoteCodeChange = useCallback((nextCode) => {
-    remoteCodeChangeRef.current?.(nextCode);
+  useEffect(() => {
+    languageRef.current = language;
+  }, [language]);
+
+  const seedLanguageIfEmpty = useCallback((lang) => {
+    const yDoc = yDocRef.current;
+    if (!yDoc || seededLanguagesRef.current.has(lang)) return;
+
+    const yText = yDoc.getText(getTextName(lang));
+    if (yText.length === 0) {
+      const starter = starterCodeRef.current?.[lang];
+      if (starter) {
+        yDoc.transact(() => {
+          yText.insert(0, starter);
+        }, "initialize-code");
+      }
+    }
+    seededLanguagesRef.current.add(lang);
   }, []);
 
-  const maybeCreateBinding = useCallback(() => {
-    if (bindingRef.current || !editorRef.current || !providerRef.current) {
-      return;
-    }
+  const rebindEditor = useCallback(
+    (lang) => {
+      const yDoc = yDocRef.current;
+      const provider = providerRef.current;
+      const editor = editorRef.current;
 
-    const model = editorRef.current.getModel();
+      if (!yDoc || !provider || !editor) return;
 
-    if (!model || !yTextRef.current) {
-      return;
-    }
+      const model = editor.getModel();
+      if (!model) return;
 
-    bindingRef.current = new MonacoBinding(
-      yTextRef.current,
-      model,
-      new Set([editorRef.current]),
-      providerRef.current.awareness,
-    );
-  }, []);
+      bindingRef.current?.destroy();
+      bindingRef.current = null;
+
+      seedLanguageIfEmpty(lang);
+
+      const yText = yDoc.getText(getTextName(lang));
+
+      bindingRef.current = new MonacoBinding(
+        yText,
+        model,
+        new Set([editor]),
+        provider.awareness,
+      );
+    },
+    [seedLanguageIfEmpty],
+  );
 
   const handleEditorMount = useCallback(
     (editor) => {
       editorRef.current = editor;
-      maybeCreateBinding();
+      rebindEditor(languageRef.current);
     },
-    [maybeCreateBinding],
+    [rebindEditor],
   );
 
+  // Rebind whenever the shared language changes (local or remote)
   useEffect(() => {
-    if (!sessionId) {
-      return undefined;
+    if (editorRef.current) {
+      rebindEditor(language);
     }
+  }, [language, rebindEditor]);
+
+  useEffect(() => {
+    if (!sessionId) return undefined;
 
     const yDoc = new Y.Doc();
-    const provider = new WebsocketProvider(
-      DEFAULT_WEBSOCKET_URL,
-      sessionId,
-      yDoc,
-    );
-    const yText = yDoc.getText(Y_TEXT_NAME);
-
-    const handleSharedTextUpdate = () => {
-      const nextCode = yText.toString();
-
-      if (nextCode.length > 0) {
-        seededInitialCodeRef.current = true;
-      }
-
-      notifyRemoteCodeChange(nextCode);
-    };
-
-    const handleProviderSync = (isSynced) => {
-      if (!isSynced) {
-        return;
-      }
-
-      if (!seededInitialCodeRef.current && yText.length === 0) {
-        const initialCode = starterCodeRef.current;
-
-        if (initialCode) {
-          yDoc.transact(() => {
-            yText.insert(0, initialCode);
-          }, "initialize-code");
-          seededInitialCodeRef.current = true;
-          notifyRemoteCodeChange(initialCode);
-        }
-      }
-
-      maybeCreateBinding();
-      notifyRemoteCodeChange(yText.toString());
-    };
+    const provider = new WebsocketProvider(WS_URL, sessionId, yDoc);
+    const yMeta = yDoc.getMap("session-meta");
 
     yDocRef.current = yDoc;
     providerRef.current = provider;
-    yTextRef.current = yText;
-    seededInitialCodeRef.current = yText.length > 0;
+    yMetaRef.current = yMeta;
 
-    yText.observe(handleSharedTextUpdate);
-    provider.on("sync", handleProviderSync);
+    const applySharedLanguage = () => {
+      const sharedLanguage = yMeta.get("language");
+      if (sharedLanguage && sharedLanguage !== languageRef.current) {
+        setLanguageState(sharedLanguage);
+        onLanguageChangeRef.current?.(sharedLanguage);
+      }
+    };
 
-    notifyRemoteCodeChange(yText.toString() || starterCodeRef.current);
-    maybeCreateBinding();
+    const handleSync = (isSynced) => {
+      if (!isSynced) return;
+
+      if (!yMeta.has("language")) {
+        yMeta.set("language", languageRef.current);
+      } else {
+        applySharedLanguage();
+      }
+
+      const activeLang = yMeta.get("language") ?? languageRef.current;
+      seedLanguageIfEmpty(activeLang);
+
+      if (editorRef.current) {
+        rebindEditor(activeLang);
+      }
+    };
+
+    yMeta.observe(applySharedLanguage);
+    provider.on("sync", handleSync);
 
     return () => {
-      yText.unobserve(handleSharedTextUpdate);
-      provider.off("sync", handleProviderSync);
+      yMeta.unobserve(applySharedLanguage);
+      provider.off("sync", handleSync);
 
       bindingRef.current?.destroy();
       bindingRef.current = null;
@@ -127,29 +154,30 @@ const useCollaborativeEditor = ({
       yDoc.destroy();
 
       yDocRef.current = null;
-      yTextRef.current = null;
+      yMetaRef.current = null;
       providerRef.current = null;
       editorRef.current = null;
-      seededInitialCodeRef.current = false;
+      seededLanguagesRef.current = new Set();
     };
-  }, [maybeCreateBinding, notifyRemoteCodeChange, sessionId]);
+  }, [sessionId, rebindEditor, seedLanguageIfEmpty]);
 
-  useEffect(() => {
-    maybeCreateBinding();
-  }, [maybeCreateBinding]);
+  const setSharedLanguage = useCallback((lang) => {
+    yMetaRef.current?.set("language", lang);
+    setLanguageState(lang);
+    onLanguageChangeRef.current?.(lang);
+  }, []);
 
-  useEffect(() => {
-    if (yTextRef.current && !seededInitialCodeRef.current) {
-      const nextCode = yTextRef.current.toString();
-
-      if (nextCode.length === 0 && starterCodeRef.current) {
-        notifyRemoteCodeChange(starterCodeRef.current);
-      }
-    }
-  }, [notifyRemoteCodeChange, starterCode]);
+  const getCurrentCode = useCallback(() => {
+    const yDoc = yDocRef.current;
+    if (!yDoc) return "";
+    return yDoc.getText(getTextName(languageRef.current)).toString();
+  }, []);
 
   return {
     handleEditorMount,
+    language,
+    setSharedLanguage,
+    getCurrentCode,
   };
 };
 
