@@ -23,7 +23,7 @@ function WelcomeSection({ onCreateSession }) {
           </div>
           <button
             onClick={onCreateSession}
-            className="group px-8 py-4 bg-primary rounded-2xl transition-all duration-200 hover:opacity-90"
+            className="group px-6 py-3 bg-primary transition-all duration-200 hover:opacity-90"
           >
             <div className="flex items-center gap-3 text-white font-bold text-lg">
               <span>Create Session</span>

@@ -8,6 +8,7 @@ import ProblemsPage from "./pages/ProblemsPage.jsx";
 import SessionPage from "./pages/SessionPage.jsx";
 import { useEffect } from "react";
 import { setupAxiosAuth } from "./lib/axios.js";
+import MobileWarningModal from "./components/MobileWarningModal.jsx";
 
 function App() {
   const { getToken } = useAuth();
@@ -20,6 +21,7 @@ function App() {
   if (!isLoaded) return null;
   return (
     <>
+      <MobileWarningModal />
       <Routes>
         <Route
           path="/"
