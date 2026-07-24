@@ -8,6 +8,8 @@ const CollaborativeEditor = ({
   onLanguageChange,
   starterCode,
   defaultLanguage = "javascript",
+  userName,
+  isHost,
 }) => {
   const { handleEditorMount, language, setSharedLanguage, getCurrentCode } =
     useCollaborativeEditor({
@@ -15,6 +17,8 @@ const CollaborativeEditor = ({
       starterCode,
       defaultLanguage,
       onLanguageChange,
+      userName,
+      isHost,
     });
 
   const handleLanguageSelect = (e) => {

@@ -59,9 +59,9 @@ const CodeEditor = ({
       <div className="flex-1 min-h-0">
         {isCollaborative ? (
           <Editor
+            path={`code-${selectedLanguage}`}
             height={"100%"}
             language={LANGUAGE_CONFIG[selectedLanguage].monacoLang}
-            defaultValue={code}
             onMount={onEditorMount}
             theme="vs-dark"
             options={{
@@ -74,6 +74,7 @@ const CodeEditor = ({
           />
         ) : (
           <Editor
+            path={`code-${selectedLanguage}`}
             height={"100%"}
             language={LANGUAGE_CONFIG[selectedLanguage].monacoLang}
             value={code}

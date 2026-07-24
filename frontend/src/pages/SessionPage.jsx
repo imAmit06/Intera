@@ -257,6 +257,8 @@ const SessionPage = () => {
                       onLanguageChange={setSelectedLanguage}
                       starterCode={problemData?.starterCode}
                       defaultLanguage={selectedLanguage}
+                      userName={user?.fullName || user?.username}
+                      isHost={isHost}
                     />
                   </Panel>
                   <Separator className="h-2 bg-base-300 hover:bg-primary transition-colors cursor-row-resize" />

@@ -11,8 +11,6 @@ if (!WEBSOCKET_URL && import.meta.env.PROD) {
   );
 }
 
-const WS_URL = WEBSOCKET_URL ?? "ws://localhost:1234";
-
 const getTextName = (language) => `code-${language}`;
 
 const useCollaborativeEditor = ({
@@ -20,6 +18,8 @@ const useCollaborativeEditor = ({
   starterCode = {},
   defaultLanguage = "javascript",
   onLanguageChange,
+  userName,
+  isHost,
 }) => {
   const yDocRef = useRef(null);
   const yMetaRef = useRef(null);
@@ -30,6 +30,7 @@ const useCollaborativeEditor = ({
   const onLanguageChangeRef = useRef(onLanguageChange);
   const seededLanguagesRef = useRef(new Set());
   const languageRef = useRef(defaultLanguage);
+  const isHostRef = useRef(isHost);
 
   const [language, setLanguageState] = useState(defaultLanguage);
 
@@ -45,7 +46,15 @@ const useCollaborativeEditor = ({
     languageRef.current = language;
   }, [language]);
 
+  useEffect(() => {
+    isHostRef.current = isHost;
+  }, [isHost]);
+
   const seedLanguageIfEmpty = useCallback((lang) => {
+    if (!isHostRef.current) {
+      return;
+    }
+
     const yDoc = yDocRef.current;
     if (!yDoc) return;
 
@@ -61,42 +70,37 @@ const useCollaborativeEditor = ({
       yDoc.transact(() => {
         yText.insert(0, starter);
       }, "initialize-code");
+      console.log(`Seeded ${lang}`, yText.toString());
       seededLanguagesRef.current.add(lang);
     }
   }, []);
 
-  useEffect(() => {
-    if (!starterCode) return;
-    seedLanguageIfEmpty(languageRef.current);
-  }, [starterCode, seedLanguageIfEmpty]);
+  const rebindEditor = useCallback((lang) => {
+    const yDoc = yDocRef.current;
+    const provider = providerRef.current;
+    const editor = editorRef.current;
 
-  const rebindEditor = useCallback(
-    (lang) => {
-      const yDoc = yDocRef.current;
-      const provider = providerRef.current;
-      const editor = editorRef.current;
+    if (!yDoc || !provider || !editor) return;
 
-      if (!yDoc || !provider || !editor) return;
+    const model = editor.getModel();
+    if (!model) return;
 
-      const model = editor.getModel();
-      if (!model) return;
+    bindingRef.current?.destroy();
+    bindingRef.current = null;
 
-      bindingRef.current?.destroy();
-      bindingRef.current = null;
+    const yText = yDoc.getText(getTextName(lang));
 
-      seedLanguageIfEmpty(lang);
+    bindingRef.current = new MonacoBinding(
+      yText,
+      model,
+      new Set([editor]),
+      provider.awareness,
+    );
 
-      const yText = yDoc.getText(getTextName(lang));
-
-      bindingRef.current = new MonacoBinding(
-        yText,
-        model,
-        new Set([editor]),
-        provider.awareness,
-      );
-    },
-    [seedLanguageIfEmpty],
-  );
+    setTimeout(() => {
+      console.log("Decorations:", editor.getModel().getAllDecorations());
+    }, 2000);
+  }, []);
 
   const handleEditorMount = useCallback(
     (editor) => {
@@ -106,19 +110,35 @@ const useCollaborativeEditor = ({
     [rebindEditor],
   );
 
-  // Rebind whenever the shared language changes (local or remote)
   useEffect(() => {
-    if (editorRef.current) {
-      rebindEditor(language);
-    }
-  }, [language, rebindEditor]);
+    if (!editorRef.current) return;
+
+    // Create starter code for this language if it doesn't exist
+    seedLanguageIfEmpty(language);
+
+    // Then bind the editor to that language
+    rebindEditor(language);
+  }, [language, rebindEditor, seedLanguageIfEmpty]);
 
   useEffect(() => {
+    console.log("INIT EFFECT");
     if (!sessionId) return undefined;
 
     const yDoc = new Y.Doc();
-    const provider = new WebsocketProvider(WS_URL, sessionId, yDoc);
+    const provider = new WebsocketProvider(WEBSOCKET_URL, sessionId, yDoc);
     const yMeta = yDoc.getMap("session-meta");
+
+    const userColor = `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`;
+    provider.awareness.setLocalStateField("user", {
+      name: userName || "Anonymous",
+      color: userColor,
+    });
+    provider.awareness.on("change", () => {
+      console.log(
+        "Awareness:",
+        Array.from(provider.awareness.getStates().entries()),
+      );
+    });
 
     yDocRef.current = yDoc;
     providerRef.current = provider;
@@ -144,15 +164,18 @@ const useCollaborativeEditor = ({
       const activeLang = yMeta.get("language") ?? languageRef.current;
       seedLanguageIfEmpty(activeLang);
 
-      if (editorRef.current) {
-        rebindEditor(activeLang);
-      }
+      setTimeout(() => {
+        if (editorRef.current) {
+          rebindEditor(activeLang);
+        }
+      }, 0);
     };
 
     yMeta.observe(applySharedLanguage);
     provider.on("sync", handleSync);
 
     return () => {
+      console.log("CLEANUP EFFECT");
       yMeta.unobserve(applySharedLanguage);
       provider.off("sync", handleSync);
 
@@ -170,11 +193,31 @@ const useCollaborativeEditor = ({
     };
   }, [sessionId, rebindEditor, seedLanguageIfEmpty]);
 
-  const setSharedLanguage = useCallback((lang) => {
-    yMetaRef.current?.set("language", lang);
-    setLanguageState(lang);
-    onLanguageChangeRef.current?.(lang);
-  }, []);
+  useEffect(() => {
+    if (!isHost) return;
+    if (!yDocRef.current) return;
+
+    const lang = yMetaRef.current?.get("language") ?? languageRef.current;
+
+    seedLanguageIfEmpty(lang);
+
+    if (editorRef.current) {
+      rebindEditor(lang);
+    }
+  }, [isHost, seedLanguageIfEmpty, rebindEditor]);
+
+  const setSharedLanguage = useCallback(
+    (lang) => {
+      yMetaRef.current?.set("language", lang);
+
+      // Ensure the Y.Text exists for this language
+      seedLanguageIfEmpty(lang);
+
+      setLanguageState(lang);
+      onLanguageChangeRef.current?.(lang);
+    },
+    [seedLanguageIfEmpty],
+  );
 
   const getCurrentCode = useCallback(() => {
     const yDoc = yDocRef.current;
